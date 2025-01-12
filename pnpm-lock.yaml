@@ -14,7 +14,7 @@ importers:
   .:
     dependencies:
       '@docmost/editor-ext':
-        specifier: workspace:false
+        specifier: workspace:*
         version: link:packages/editor-ext
       '@hocuspocus/extension-redis':
         specifier: ^2.14.0
