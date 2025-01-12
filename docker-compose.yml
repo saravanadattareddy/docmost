@@ -6,32 +6,67 @@ services:
     depends_on:
       - db
       - redis
-    environment:
-      APP_URL: 'http://localhost:3000'
-      APP_SECRET: 'REPLACE_WITH_LONG_SECRET'
-      DATABASE_URL: 'postgresql://docmost:STRONG_DB_PASSWORD@db:5432/docmost?schema=public'
-      REDIS_URL: 'redis://redis:6379'
+    env_file:
+      - .env
     ports:
       - "3000:3000"
     restart: unless-stopped
     volumes:
       - docmost:/app/data/storage
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.docmost.rule=Host(`dev-cloud-center.pantheonsite.io`)'
+      - 'traefik.http.services.docmost.loadbalancer.server.port=3000'
+      - 'traefik.http.routers.docmost.entrypoints=websecure'
+      - 'traefik.http.routers.docmost.tls.certresolver=myresolver'
+      - 'traefik.docker.network=web'
+    networks:
+      - web
 
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: docmost
       POSTGRES_USER: docmost
-      POSTGRES_PASSWORD: STRONG_DB_PASSWORD
+      POSTGRES_PASSWORD: W6PT4Vv5P77mEvIhN63LnuGu1
     restart: unless-stopped
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - web
 
   redis:
     image: redis:7.2-alpine
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    networks:
+      - web
+
+  traefik:
+    restart: unless-stopped
+    image: traefik:v3.0
+    command:
+      - '--api.insecure=true'
+      - '--providers.docker=true'
+      - '--entrypoints.web.address=:80'
+      - '--entrypoints.websecure.address=:443'
+      - '--certificatesresolvers.myresolver.acme.tlschallenge=true'
+      - '--certificatesresolvers.myresolver.acme.email=saravanadattareddy251298@gmail.com'
+      - '--certificatesresolvers.myresolver.acme.storage=/certs/acme.json'
+      - '--log.level=DEBUG'
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /docmost/certs:/certs
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
 
 volumes:
   docmost:
